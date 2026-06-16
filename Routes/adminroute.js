@@ -1,24 +1,15 @@
 const express = require("express");
 const router = express.Router();
-const db = require("../db");
+const { login, createAdmin, getAllAdmins } = require("../controllers/adminController");
+const authMiddleware = require("../middleware/authMiddleware");
 
 // LOGIN (simple)
-router.post("/login", (req, res) => {
-  const { username, password } = req.body;
+router.post("/login", login);
 
-  db.query(
-    "SELECT * FROM admins WHERE username=? AND password=?",
-    [username, password],
-    (err, result) => {
-      if (err) return res.json(err);
+// GET ALL ADMINS
+router.get("/", authMiddleware, getAllAdmins);
 
-      if (result.length > 0) {
-        res.json({ message: "Login success", user: result[0] });
-      } else {
-        res.status(401).json({ message: "Invalid login" });
-      }
-    }
-  );
-});
+// CREATE ADMIN
+router.post("/", authMiddleware, createAdmin);
 
 module.exports = router;
