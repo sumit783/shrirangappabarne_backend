@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const db = require("./db"); // Load and connect to database
+const morgan = require("morgan");
 
 const fs = require("fs");
 const path = require("path");
@@ -27,6 +28,9 @@ const corsOptions = {
 };
 
 app.use(cors(corsOptions));
+
+// Log API hits
+app.use(morgan("dev"));
 
 // Body Parser Middleware with size limits for base64 uploads
 app.use(bodyParser.json({ limit: "10mb" }));
@@ -73,18 +77,21 @@ const adminRoute = require("./Routes/adminroute");
 const newsRoute = require("./Routes/newsroute");
 const blogRoute = require("./Routes/blogroute");
 const imageRoute = require("./Routes/imageroute");
+const contactRoute = require("./Routes/contactroute");
 
 // Register Routes
 app.use("/api/admin", adminRoute);
 app.use("/api/news", newsRoute);
 app.use("/api/blogs", blogRoute);
 app.use("/api/images", imageRoute);
+app.use("/api/contact", contactRoute);
 
 // Also support routes without /api prefix just in case
 app.use("/admin", adminRoute);
 app.use("/news", newsRoute);
 app.use("/blogs", blogRoute);
 app.use("/images", imageRoute);
+app.use("/contact", contactRoute);
 
 // Base Route
 app.get("/", (req, res) => {

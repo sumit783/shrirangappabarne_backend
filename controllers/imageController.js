@@ -105,3 +105,28 @@ exports.deleteImage = (req, res) => {
     res.json({ message: "Image deleted successfully" });
   });
 };
+
+// GET HERO IMAGES (isHeroSelectionImage = 1, latest first)
+exports.getHeroImages = (req, res) => {
+  db.query(
+    "SELECT * FROM images WHERE isHeroSelectionImage = 1 ORDER BY created_at DESC",
+    async (err, result) => {
+      if (err) return res.status(500).json(err);
+
+      const targetLang = getTargetLanguage(req);
+      if (targetLang) {
+        try {
+          const translatedResult = await Promise.all(
+            result.map((item) => translateImageItem(item, targetLang))
+          );
+          return res.json(translatedResult);
+        } catch (transErr) {
+          console.error("Error translating hero images:", transErr.message);
+        }
+      }
+
+      res.json(result);
+    }
+  );
+};
+

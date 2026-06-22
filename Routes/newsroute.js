@@ -1,10 +1,28 @@
 const express = require("express");
 const router = express.Router();
-const {getAllNews,getNewsById,createNews,updateNews,deleteNews} = require("../controllers/newsController");
+const {
+  getAllNews,
+  getNewsById,
+  createNews,
+  updateNews,
+  deleteNews,
+  getCategories,
+  getNewsByCategory,
+  getTopNewsByCategory
+} = require("../controllers/newsController");
 const authMiddleware = require("../middleware/authMiddleware");
 
 // GET ALL NEWS
 router.get("/", getAllNews);
+
+// GET DISTINCT CATEGORIES (max 4)
+router.get("/categories", getCategories);
+
+// GET ALL NEWS BY CATEGORY (latest first, optional ?category=Sports)
+router.get("/by-category", getNewsByCategory);
+
+// GET TOP 3 NEWS BY CATEGORY (max 3, optional ?category=Sports)
+router.get("/by-category/top", getTopNewsByCategory);
 
 // GET BY ID
 router.get("/:id", getNewsById);

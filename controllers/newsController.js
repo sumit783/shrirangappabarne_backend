@@ -97,3 +97,101 @@ exports.deleteNews = (req, res) => {
     res.json({ message: "Deleted" });
   });
 };
+
+// GET CATEGORIES (max 4 distinct from news table)
+exports.getCategories = (req, res) => {
+  db.query(
+    "SELECT DISTINCT category FROM news WHERE category IS NOT NULL AND TRIM(category) != '' ORDER BY category ASC LIMIT 4",
+    async (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      const targetLang = getTargetLanguage(req);
+      const categories = result.map((r) => r.category);
+
+      if (targetLang) {
+        try {
+          const translated = await Promise.all(
+            categories.map((c) => translateText(c, targetLang))
+          );
+          return res.json({ categories: translated });
+        } catch (transErr) {
+          console.error("Error translating categories:", transErr.message);
+        }
+      }
+
+      res.json({ categories });
+    }
+  );
+};
+
+// GET ALL NEWS BY CATEGORY (filtered, latest first)
+// Usage: GET /news/by-category?category=Sports
+// If no category provided, returns all news ordered latest first
+exports.getNewsByCategory = (req, res) => {
+  const { category } = req.query;
+
+  let sql = "SELECT * FROM news";
+  const params = [];
+
+  if (category) {
+    sql += " WHERE category = ?";
+    params.push(category);
+  }
+
+  sql += " ORDER BY id DESC";
+
+  db.query(sql, params, async (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const targetLang = getTargetLanguage(req);
+    if (targetLang) {
+      try {
+        const translated = await Promise.all(
+          result.map((item) => translateNewsItem(item, targetLang))
+        );
+        return res.json(translated);
+      } catch (transErr) {
+        console.error("Error translating news by category:", transErr.message);
+      }
+    }
+
+    res.json(result);
+  });
+};
+
+// GET TOP 3 NEWS BY CATEGORY (latest 3, useful for homepage sections)
+// Usage: GET /news/by-category/top?category=Sports
+// If no category provided, returns latest 3 across all categories
+exports.getTopNewsByCategory = (req, res) => {
+  const { category } = req.query;
+
+  let sql = "SELECT * FROM news";
+  const params = [];
+
+  if (category) {
+    sql += " WHERE category = ?";
+    params.push(category);
+  }
+
+  sql += " ORDER BY id DESC LIMIT 3";
+
+  db.query(sql, params, async (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const targetLang = getTargetLanguage(req);
+    if (targetLang) {
+      try {
+        const translated = await Promise.all(
+          result.map((item) => translateNewsItem(item, targetLang))
+        );
+        return res.json(translated);
+      } catch (transErr) {
+        console.error("Error translating top news by category:", transErr.message);
+      }
+    }
+
+    res.json(result);
+  });
+};
+
+

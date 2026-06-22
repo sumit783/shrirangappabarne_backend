@@ -307,3 +307,89 @@ exports.deleteBlog = (req, res) => {
     res.json({ message: "Blog deleted successfully" });
   });
 };
+
+// GET BLOG AUTHORS as categories (distinct non-null authors from published blogs)
+// Usage: GET /blogs/categories
+exports.getBlogAuthors = (req, res) => {
+  db.query(
+    "SELECT DISTINCT author FROM blogs WHERE author IS NOT NULL AND TRIM(author) != '' AND status = 'published' ORDER BY author ASC",
+    async (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      const targetLang = getTargetLanguage(req);
+      const authors = result.map((r) => r.author);
+
+      if (targetLang) {
+        try {
+          const translated = await Promise.all(
+            authors.map((a) => translateText(a, targetLang))
+          );
+          return res.json({ categories: translated });
+        } catch (transErr) {
+          console.error("Error translating blog authors:", transErr.message);
+        }
+      }
+
+      res.json({ categories: authors });
+    }
+  );
+};
+
+// GET TOP 4 BLOGS (latest published, useful for homepage sections)
+// Usage: GET /blogs/top
+exports.getTopBlogs = (req, res) => {
+  db.query(
+    "SELECT id, title, slug, image, author, meta_description, published_at, created_at FROM blogs WHERE status = 'published' ORDER BY id DESC LIMIT 4",
+    async (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      const targetLang = getTargetLanguage(req);
+      try {
+        const translated = await Promise.all(
+          result.map((item) => translateBlogItem(item, targetLang))
+        );
+        return res.json(translated);
+      } catch (transErr) {
+        console.error("Error translating top blogs:", transErr.message);
+        res.json(result);
+      }
+    }
+  );
+};
+
+// GET ALL PUBLIC BLOGS with optional ?search= filter (latest published first)
+// Usage: GET /blogs/public
+//        GET /blogs/public?search=keyword
+//        GET /blogs/public?search=keyword&lang=mr
+exports.getPublicBlogs = (req, res) => {
+  const { search } = req.query;
+
+  let conditions = ["status = 'published'"];
+  const params = [];
+
+  if (search && search.trim()) {
+    conditions.push("(title LIKE ? OR content LIKE ? OR meta_description LIKE ?)");
+    params.push(`%${search}%`, `%${search}%`, `%${search}%`);
+  }
+
+  const query =
+    "SELECT id, title, slug, image, author, meta_description, published_at, created_at FROM blogs WHERE " +
+    conditions.join(" AND ") +
+    " ORDER BY id DESC";
+
+  db.query(query, params, async (err, result) => {
+    if (err) return res.status(500).json({ error: err.message });
+
+    const targetLang = getTargetLanguage(req);
+    try {
+      const translated = await Promise.all(
+        result.map((item) => translateBlogItem(item, targetLang))
+      );
+      return res.json(translated);
+    } catch (transErr) {
+      console.error("Error translating public blogs:", transErr.message);
+      res.json(result);
+    }
+  });
+};
+

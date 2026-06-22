@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const db = require("../db");
+const { translateText, getTargetLanguage } = require("../utils/translator");
 
 // LOGIN (simple)
 exports.login = (req, res) => {
@@ -77,3 +78,97 @@ exports.getAllAdmins = (req, res) => {
     res.json(result);
   });
 };
+
+// GET STATS
+exports.getStats = async (req, res) => {
+  const queryPromise = (sql) => {
+    return new Promise((resolve, reject) => {
+      db.query(sql, (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+  };
+
+  try {
+    const [newsCount, blogsCount, adminsCount, imagesCount] = await Promise.all([
+      queryPromise("SELECT COUNT(*) as count FROM news"),
+      queryPromise("SELECT COUNT(*) as count FROM blogs"),
+      queryPromise("SELECT COUNT(*) as count FROM admins"),
+      queryPromise("SELECT COUNT(*) as count FROM images").catch(() => [{ count: 0 }])
+    ]);
+
+    res.json({
+      news: newsCount[0].count,
+      blogs: blogsCount[0].count,
+      admins: adminsCount[0].count,
+      images: imagesCount[0].count
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+// GET LATEST DATA (latest 5 news, blogs, admins) – with language translation
+exports.getLatestData = async (req, res) => {
+  const queryPromise = (sql, params = []) => {
+    return new Promise((resolve, reject) => {
+      db.query(sql, params, (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+  };
+
+  try {
+    const [latestNews, latestBlogs, latestAdmins] = await Promise.all([
+      queryPromise("SELECT id, category, title, description, image, created_at, news_date FROM news ORDER BY id DESC LIMIT 5"),
+      queryPromise("SELECT id, title, slug, image, author, status, published_at, created_at, updated_at FROM blogs ORDER BY id DESC LIMIT 5"),
+      queryPromise("SELECT id, username FROM admins ORDER BY id DESC LIMIT 5")
+    ]);
+
+    const targetLang = getTargetLanguage(req);
+
+    // Translate news fields if a target language was requested
+    const translatedNews = targetLang
+      ? await Promise.all(
+          latestNews.map(async (item) => {
+            try {
+              const [title, category, description] = await Promise.all([
+                translateText(item.title, targetLang),
+                translateText(item.category, targetLang),
+                translateText(item.description, targetLang)
+              ]);
+              return { ...item, title, category, description };
+            } catch {
+              return item;
+            }
+          })
+        )
+      : latestNews;
+
+    // Translate blog title field if a target language was requested
+    const translatedBlogs = targetLang
+      ? await Promise.all(
+          latestBlogs.map(async (item) => {
+            try {
+              const title = await translateText(item.title, targetLang);
+              return { ...item, title };
+            } catch {
+              return item;
+            }
+          })
+        )
+      : latestBlogs;
+
+    res.json({
+      news: translatedNews,
+      blogs: translatedBlogs,
+      admins: latestAdmins
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+

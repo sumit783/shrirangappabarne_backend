@@ -22,16 +22,25 @@ async function translateText(text, targetLang) {
     return translationCache.get(cacheKey);
   }
   
-  const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${source}|${target}`;
+  // Google Translate free endpoint (gtx)
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${source}&tl=${target}&dt=t&q=${encodeURIComponent(text)}`;
   
   try {
     const response = await fetch(url);
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const data = await response.json();
-    if (data && data.responseData && data.responseData.translatedText) {
-      const translated = data.responseData.translatedText;
-      translationCache.set(cacheKey, translated);
-      return translated;
+    if (!response.ok) {
+      if (response.status === 429) {
+        console.warn("Translation rate limit hit (429). Returning original text.");
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+    } else {
+      const data = await response.json();
+      if (data && data[0]) {
+        // data[0] contains an array of translated sentences
+        const translated = data[0].map(item => item[0]).join('');
+        translationCache.set(cacheKey, translated);
+        return translated;
+      }
     }
   } catch (error) {
     console.error(`Translation failed for text "${text.substring(0, 20)}...":`, error.message);
