@@ -33,8 +33,8 @@ app.use(cors(corsOptions));
 app.use(morgan("dev"));
 
 // Body Parser Middleware with size limits for base64 uploads
-app.use(bodyParser.json({ limit: "10mb" }));
-app.use(bodyParser.urlencoded({ limit: "10mb", extended: true }));
+app.use(bodyParser.json({ limit: "500mb" }));
+app.use(bodyParser.urlencoded({ limit: "500mb", extended: true }));
 
 // Serve uploads folder statically
 app.use("/api/uploads", express.static(path.join(__dirname, "uploads")));

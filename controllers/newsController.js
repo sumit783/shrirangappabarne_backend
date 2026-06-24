@@ -64,11 +64,11 @@ exports.getNewsById = (req, res) => {
 
 // INSERT NEWS
 exports.createNews = (req, res) => {
-  const { title, category, description, image, news_date } = req.body;
+  const { title, category, description, image, video, news_date } = req.body;
 
   db.query(
-    "INSERT INTO news (title, category, description, image, news_date) VALUES (?,?,?,?,?)",
-    [title, category || 'News', description, image, news_date],
+    "INSERT INTO news (title, category, description, image, video, news_date) VALUES (?,?,?,?,?,?)",
+    [title, category || 'News', description, image, video, news_date],
     (err, result) => {
       if (err) return res.json(err);
       res.json({ message: "News added", result });
@@ -78,11 +78,11 @@ exports.createNews = (req, res) => {
 
 // UPDATE NEWS
 exports.updateNews = (req, res) => {
-  const { title, category, description, image, news_date } = req.body;
+  const { title, category, description, image, video, news_date } = req.body;
 
   db.query(
-    "UPDATE news SET title=?, category=?, description=?, image=?, news_date=? WHERE id=?",
-    [title, category || 'News', description, image, news_date, req.params.id],
+    "UPDATE news SET title=?, category=?, description=?, image=?, video=?, news_date=? WHERE id=?",
+    [title, category || 'News', description, image, video, news_date, req.params.id],
     (err, result) => {
       if (err) return res.json(err);
       res.json({ message: "Updated" });
