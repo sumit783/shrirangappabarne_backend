@@ -23,23 +23,78 @@ async function translateNewsItem(item, targetLang) {
 
 // GET ALL NEWS
 exports.getAllNews = (req, res) => {
-  db.query("SELECT * FROM news", async (err, result) => {
-    if (err) return res.json(err);
-    
-    const targetLang = getTargetLanguage(req);
-    if (targetLang) {
-      try {
-        const translatedResult = await Promise.all(
-          result.map(item => translateNewsItem(item, targetLang))
-        );
-        return res.json(translatedResult);
-      } catch (transErr) {
-        console.error("Error in parallel translation:", transErr.message);
-      }
+  const { page, limit, search } = req.query;
+
+  let sql = "SELECT * FROM news WHERE 1=1";
+  const params = [];
+
+  if (search) {
+    sql += " AND (title LIKE ? OR description LIKE ?)";
+    params.push(`%${search}%`, `%${search}%`);
+  }
+
+  sql += " ORDER BY id DESC";
+
+  if (page && limit) {
+    let countSql = "SELECT COUNT(*) as total FROM news WHERE 1=1";
+    const countParams = [];
+    if (search) {
+      countSql += " AND (title LIKE ? OR description LIKE ?)";
+      countParams.push(`%${search}%`, `%${search}%`);
     }
-    
-    res.json(result);
-  });
+
+    db.query(countSql, countParams, (countErr, countResult) => {
+      if (countErr) return res.status(500).json({ error: countErr.message });
+      const total = countResult[0].total;
+
+      const offset = (parseInt(page) - 1) * parseInt(limit);
+      sql += " LIMIT ? OFFSET ?";
+      params.push(parseInt(limit), offset);
+
+      db.query(sql, params, async (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        let finalResult = result;
+        const targetLang = getTargetLanguage(req);
+        if (targetLang) {
+          try {
+            finalResult = await Promise.all(
+              result.map((item) => translateNewsItem(item, targetLang))
+            );
+          } catch (transErr) {
+            console.error("Error in parallel translation:", transErr.message);
+          }
+        }
+
+        return res.json({
+          data: finalResult,
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(total / parseInt(limit))
+        });
+      });
+    });
+  } else {
+    // Backward compatible mode if no page/limit
+    db.query(sql, params, async (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      const targetLang = getTargetLanguage(req);
+      if (targetLang) {
+        try {
+          const translatedResult = await Promise.all(
+            result.map((item) => translateNewsItem(item, targetLang))
+          );
+          return res.json(translatedResult);
+        } catch (transErr) {
+          console.error("Error in parallel translation:", transErr.message);
+        }
+      }
+
+      res.json(result);
+    });
+  }
 };
 
 // GET BY ID
@@ -106,57 +161,114 @@ exports.getCategories = (req, res) => {
       if (err) return res.status(500).json({ error: err.message });
 
       const targetLang = getTargetLanguage(req);
-      const categories = result.map((r) => r.category);
+      const originalCategories = result.map((r) => r.category);
 
       if (targetLang) {
         try {
           const translated = await Promise.all(
-            categories.map((c) => translateText(c, targetLang))
+            originalCategories.map((c) => translateText(c, targetLang))
           );
-          return res.json({ categories: translated });
+          const categories = originalCategories.map((c, i) => ({
+            key: c,
+            label: translated[i]
+          }));
+          return res.json({ categories });
         } catch (transErr) {
           console.error("Error translating categories:", transErr.message);
         }
       }
 
+      const categories = originalCategories.map(c => ({ key: c, label: c }));
       res.json({ categories });
     }
   );
 };
 
 // GET ALL NEWS BY CATEGORY (filtered, latest first)
-// Usage: GET /news/by-category?category=Sports
+// Usage: GET /news/by-category?category=Sports&search=test&page=1&limit=10
 // If no category provided, returns all news ordered latest first
 exports.getNewsByCategory = (req, res) => {
-  const { category } = req.query;
+  const { category, search, page, limit } = req.query;
 
-  let sql = "SELECT * FROM news";
+  let sql = "SELECT * FROM news WHERE 1=1";
   const params = [];
 
   if (category) {
-    sql += " WHERE category = ?";
+    sql += " AND category = ?";
     params.push(category);
+  }
+
+  if (search) {
+    sql += " AND (title LIKE ? OR description LIKE ?)";
+    params.push(`%${search}%`, `%${search}%`);
   }
 
   sql += " ORDER BY id DESC";
 
-  db.query(sql, params, async (err, result) => {
-    if (err) return res.status(500).json({ error: err.message });
-
-    const targetLang = getTargetLanguage(req);
-    if (targetLang) {
-      try {
-        const translated = await Promise.all(
-          result.map((item) => translateNewsItem(item, targetLang))
-        );
-        return res.json(translated);
-      } catch (transErr) {
-        console.error("Error translating news by category:", transErr.message);
-      }
+  if (page && limit) {
+    let countSql = "SELECT COUNT(*) as total FROM news WHERE 1=1";
+    const countParams = [];
+    if (category) {
+      countSql += " AND category = ?";
+      countParams.push(category);
+    }
+    if (search) {
+      countSql += " AND (title LIKE ? OR description LIKE ?)";
+      countParams.push(`%${search}%`, `%${search}%`);
     }
 
-    res.json(result);
-  });
+    db.query(countSql, countParams, (countErr, countResult) => {
+      if (countErr) return res.status(500).json({ error: countErr.message });
+      const total = countResult[0].total;
+
+      const offset = (parseInt(page) - 1) * parseInt(limit);
+      sql += " LIMIT ? OFFSET ?";
+      params.push(parseInt(limit), offset);
+
+      db.query(sql, params, async (err, result) => {
+        if (err) return res.status(500).json({ error: err.message });
+
+        let finalResult = result;
+        const targetLang = getTargetLanguage(req);
+        if (targetLang) {
+          try {
+            finalResult = await Promise.all(
+              result.map((item) => translateNewsItem(item, targetLang))
+            );
+          } catch (transErr) {
+            console.error("Error translating news by category:", transErr.message);
+          }
+        }
+
+        return res.json({
+          data: finalResult,
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(total / parseInt(limit))
+        });
+      });
+    });
+  } else {
+    // Backward compatible mode if no page/limit
+    db.query(sql, params, async (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+
+      const targetLang = getTargetLanguage(req);
+      if (targetLang) {
+        try {
+          const translated = await Promise.all(
+            result.map((item) => translateNewsItem(item, targetLang))
+          );
+          return res.json(translated);
+        } catch (transErr) {
+          console.error("Error translating news by category:", transErr.message);
+        }
+      }
+
+      res.json(result);
+    });
+  }
 };
 
 // GET TOP 3 NEWS BY CATEGORY (latest 3, useful for homepage sections)
