@@ -52,7 +52,7 @@ app.post("/api/upload", (req, res) => {
   if (!base64) return res.status(400).json({ error: "No image base64 data provided" });
 
   try {
-    const matches = base64.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    const matches = base64.match(/^data:([A-Za-z0-9-+\/]+);base64,(.+)$/);
     if (!matches || matches.length !== 3) {
       return res.status(400).json({ error: "Invalid base64 string format" });
     }
