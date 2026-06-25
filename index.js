@@ -47,7 +47,9 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Upload Endpoint
-app.post("/api/upload", (req, res) => {
+const { uploadImage } = require("./utils/cloudinary");
+
+app.post("/api/upload", async (req, res) => {
   const { name, base64 } = req.body;
   if (!base64) return res.status(400).json({ error: "No image base64 data provided" });
 
@@ -57,14 +59,11 @@ app.post("/api/upload", (req, res) => {
       return res.status(400).json({ error: "Invalid base64 string format" });
     }
 
-    const ext = matches[1].split("/")[1];
-    const buffer = Buffer.from(matches[2], "base64");
-    const filename = `${Date.now()}_${name ? name.replace(/[^a-z0-9]/gi, '_').toLowerCase() : 'image'}.${ext}`;
-    fs.writeFileSync(path.join(uploadsDir, filename), buffer);
-
-    res.json({ url: `/api/uploads/${filename}` });
+    const secureUrl = await uploadImage(base64, "uploads");
+    res.json({ url: secureUrl });
   } catch (err) {
-    res.status(500).json({ error: "Failed to save file: " + err.message });
+    console.error("Upload error:", err);
+    res.status(500).json({ error: "Failed to upload file: " + err.message });
   }
 });
 

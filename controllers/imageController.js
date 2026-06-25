@@ -96,13 +96,26 @@ exports.updateImage = (req, res) => {
 };
 
 // DELETE IMAGE
+const { deleteImageFromCloudinary } = require("../utils/cloudinary");
+
 exports.deleteImage = (req, res) => {
-  db.query("DELETE FROM images WHERE id=?", [req.params.id], (err, result) => {
-    if (err) return res.status(500).json(err);
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ message: "Image not found" });
-    }
-    res.json({ message: "Image deleted successfully" });
+  const imageId = req.params.id;
+
+  db.query("SELECT image FROM images WHERE id=?", [imageId], (selectErr, selectResult) => {
+    if (selectErr) return res.status(500).json(selectErr);
+
+    db.query("DELETE FROM images WHERE id=?", [imageId], async (err, result) => {
+      if (err) return res.status(500).json(err);
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+
+      if (selectResult.length > 0 && selectResult[0].image) {
+        await deleteImageFromCloudinary(selectResult[0].image);
+      }
+
+      res.json({ message: "Image deleted successfully" });
+    });
   });
 };
 

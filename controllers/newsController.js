@@ -146,10 +146,31 @@ exports.updateNews = (req, res) => {
 };
 
 // DELETE NEWS
+const { deleteImageFromCloudinary } = require("../utils/cloudinary");
+
 exports.deleteNews = (req, res) => {
-  db.query("DELETE FROM news WHERE id=?", [req.params.id], (err, result) => {
-    if (err) return res.json(err);
-    res.json({ message: "Deleted" });
+  const newsId = req.params.id;
+  
+  // First get the news item to find its image
+  db.query("SELECT image FROM news WHERE id=?", [newsId], (selectErr, selectResult) => {
+    if (selectErr) return res.status(500).json(selectErr);
+    
+    // Proceed to delete the record
+    db.query("DELETE FROM news WHERE id=?", [newsId], async (err, result) => {
+      if (err) return res.status(500).json(err);
+      
+      // If we found the image, delete it from Cloudinary
+      if (selectResult.length > 0) {
+        console.log("deleteNews -> Image URL from DB:", selectResult[0].image);
+        if (selectResult[0].image) {
+          await deleteImageFromCloudinary(selectResult[0].image);
+        }
+      } else {
+        console.log("deleteNews -> No image found in DB for newsId:", newsId);
+      }
+      
+      res.json({ message: "Deleted" });
+    });
   });
 };
 
