@@ -177,7 +177,7 @@ exports.deleteNews = (req, res) => {
 // GET CATEGORIES (max 4 distinct from news table)
 exports.getCategories = (req, res) => {
   db.query(
-    "SELECT DISTINCT category FROM news WHERE category IS NOT NULL AND TRIM(category) != '' ORDER BY category ASC LIMIT 4",
+    "SELECT DISTINCT category FROM news WHERE category IS NOT NULL AND TRIM(category) != '' ORDER BY category ASC",
     async (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
 
