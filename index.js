@@ -74,6 +74,7 @@ app.post("/upload", (req, res) => {
 // Import Routes
 const adminRoute = require("./Routes/adminroute");
 const newsRoute = require("./Routes/newsroute");
+const developmentWorkRoute = require("./Routes/developmentworkroute");
 const blogRoute = require("./Routes/blogroute");
 const imageRoute = require("./Routes/imageroute");
 const contactRoute = require("./Routes/contactroute");
@@ -81,6 +82,7 @@ const contactRoute = require("./Routes/contactroute");
 // Register Routes
 app.use("/api/admin", adminRoute);
 app.use("/api/news", newsRoute);
+app.use("/api/development_work", developmentWorkRoute);
 app.use("/api/blogs", blogRoute);
 app.use("/api/images", imageRoute);
 app.use("/api/contact", contactRoute);
@@ -88,6 +90,7 @@ app.use("/api/contact", contactRoute);
 // Also support routes without /api prefix just in case
 app.use("/admin", adminRoute);
 app.use("/news", newsRoute);
+app.use("/development_work", developmentWorkRoute);
 app.use("/blogs", blogRoute);
 app.use("/images", imageRoute);
 app.use("/contact", contactRoute);
