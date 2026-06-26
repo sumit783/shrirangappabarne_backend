@@ -23,14 +23,29 @@ async function translateNewsItem(item, targetLang) {
 
 // GET ALL NEWS
 exports.getAllNews = (req, res) => {
-  const { page, limit, search } = req.query;
+  const { page, limit, search, category, startDate, endDate } = req.query;
 
   let sql = "SELECT * FROM news WHERE 1=1";
   const params = [];
 
+  if (category) {
+    sql += " AND category = ?";
+    params.push(category);
+  }
+
   if (search) {
     sql += " AND (title LIKE ? OR description LIKE ?)";
     params.push(`%${search}%`, `%${search}%`);
+  }
+
+  if (startDate) {
+    sql += " AND DATE(created_at) >= ?";
+    params.push(startDate);
+  }
+
+  if (endDate) {
+    sql += " AND DATE(created_at) <= ?";
+    params.push(endDate);
   }
 
   sql += " ORDER BY id DESC";
@@ -38,9 +53,25 @@ exports.getAllNews = (req, res) => {
   if (page && limit) {
     let countSql = "SELECT COUNT(*) as total FROM news WHERE 1=1";
     const countParams = [];
+
+    if (category) {
+      countSql += " AND category = ?";
+      countParams.push(category);
+    }
+
     if (search) {
       countSql += " AND (title LIKE ? OR description LIKE ?)";
       countParams.push(`%${search}%`, `%${search}%`);
+    }
+
+    if (startDate) {
+      countSql += " AND DATE(created_at) >= ?";
+      countParams.push(startDate);
+    }
+
+    if (endDate) {
+      countSql += " AND DATE(created_at) <= ?";
+      countParams.push(endDate);
     }
 
     db.query(countSql, countParams, (countErr, countResult) => {

@@ -171,4 +171,13 @@ exports.getLatestData = async (req, res) => {
   }
 };
 
-
+// GET ALL NEWS CATEGORIES
+exports.getAllNewsCategories = (req, res) => {
+  db.query(
+    "SELECT DISTINCT category FROM news WHERE category IS NOT NULL AND TRIM(category) != '' ORDER BY category ASC",
+    (err, result) => {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json(result.map(row => row.category));
+    }
+  );
+};
