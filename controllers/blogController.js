@@ -122,7 +122,7 @@ exports.getAllBlogs = (req, res) => {
   if (conditions.length > 0) {
     query += " WHERE " + conditions.join(" AND ");
   }
-  query += " ORDER BY id DESC";
+  query += " ORDER BY id DESC LIMIT 20";
 
   db.query(query, params, async (err, result) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -386,7 +386,7 @@ exports.getPublicBlogs = (req, res) => {
   const query =
     "SELECT id, title, slug, image, author, meta_description, published_at, created_at FROM blogs WHERE " +
     conditions.join(" AND ") +
-    " ORDER BY id DESC";
+    " ORDER BY id DESC LIMIT 20";
 
   db.query(query, params, async (err, result) => {
     if (err) return res.status(500).json({ error: err.message });

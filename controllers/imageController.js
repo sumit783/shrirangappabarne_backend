@@ -17,7 +17,7 @@ async function translateImageItem(item, targetLang) {
 
 // GET ALL IMAGES
 exports.getAllImages = (req, res) => {
-  db.query("SELECT * FROM images ORDER BY created_at DESC", async (err, result) => {
+  db.query("SELECT * FROM images ORDER BY created_at DESC LIMIT 20", async (err, result) => {
     if (err) return res.status(500).json(err);
     
     const targetLang = getTargetLanguage(req);
@@ -122,7 +122,7 @@ exports.deleteImage = (req, res) => {
 // GET HERO IMAGES (isHeroSelectionImage = 1, latest first)
 exports.getHeroImages = (req, res) => {
   db.query(
-    "SELECT * FROM images WHERE isHeroSelectionImage = 1 ORDER BY created_at DESC",
+    "SELECT * FROM images WHERE isHeroSelectionImage = 1 ORDER BY created_at DESC LIMIT 20",
     async (err, result) => {
       if (err) return res.status(500).json(err);
 
