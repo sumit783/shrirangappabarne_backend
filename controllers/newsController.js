@@ -108,7 +108,7 @@ exports.getAllNews = (req, res) => {
     });
   } else {
     // Backward compatible mode if no page/limit
-    sql += " LIMIT 20";
+    // Removed LIMIT 20 so it returns all data
     db.query(sql, params, async (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
 
@@ -304,7 +304,7 @@ exports.getNewsByCategory = (req, res) => {
     });
   } else {
     // Backward compatible mode if no page/limit
-    sql += " LIMIT 20";
+    // Removed LIMIT 20 so it returns all data
     db.query(sql, params, async (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
 
